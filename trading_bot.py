@@ -1,5 +1,3 @@
-# trading_bot.py
-
 import schedule
 import time
 import logging
@@ -11,6 +9,7 @@ from dotenv import load_dotenv
 import os
 import pandas as pd
 from bybit_demo_session import BybitDemoSession
+from helpers import Helpers  # Import the Helpers module
 
 class TradingBot:
     def __init__(self):
@@ -45,16 +44,9 @@ class TradingBot:
         logging.basicConfig(filename='trading_bot.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         
     def job(self):
-        last_closed_position = self.data_fetcher.get_last_closed_position(self.symbol)
-        if last_closed_position:
-            last_closed_time = int(last_closed_position['updatedTime']) / 1000
-            current_time = time.time()
-            time_since_last_close = current_time - last_closed_time
-            print(f"Time since last closed position: {int(time_since_last_close)} seconds")
-            if time_since_last_close < 120:
-                print("The last closed position was less than 3 minutes ago. A new order will not be placed.")
-                return
 
+        print("--------------------")
+        
         get_historical_data = self.data_fetcher.get_historical_data(self.symbol, self.interval, self.limit)
         if get_historical_data is None:
             print("Failed to retrieve historical data.")
@@ -62,28 +54,35 @@ class TradingBot:
 
         df = self.strategy.prepare_dataframe(get_historical_data)
 
-        # Calculate indicators
-        df['EMA_9'] = self.indicators.calculate_ema(df, 9)
-        df['RSI'] = self.indicators.calculate_rsi(df, 14)
-        df['Bollinger_upper'], df['Bollinger_middle'], df['Bollinger_lower'] = self.indicators.calculate_bollinger_bands(df)
-
-        # Get the latest indicator values
-        rsi = df['RSI'].iloc[-1]
-        bollinger_upper = df['Bollinger_upper'].iloc[-1]
-        bollinger_middle = df['Bollinger_middle'].iloc[-1]
-        bollinger_lower = df['Bollinger_lower'].iloc[-1]
-        current_price = df['close'].iloc[-1]
-
-        # Print the indicator values
-        print(f"RSI: {rsi:.2f}")
-        print(f"Bollinger Upper: {bollinger_upper:.2f}")
-        print(f"Bollinger Middle: {bollinger_middle:.2f}")
-        print(f"Bollinger Lower: {bollinger_lower:.2f}")
-        print(f"Current Price: {current_price:.2f}")
+        # Calculate and print indicators using helper method
+        rsi, bollinger_upper, bollinger_middle, bollinger_lower, current_price = Helpers.calculate_and_print_indicators(df, self.indicators)
 
         trend = self.strategy.mean_reversion_strategy(df)
         if trend:
+
+            last_closed_position = self.data_fetcher.get_last_closed_position(self.symbol)
+            if last_closed_position:
+                last_closed_time = int(last_closed_position['updatedTime']) / 1000
+                current_time = time.time()
+                time_since_last_close = current_time - last_closed_time
+                print(f"Time since last closed position: {int(time_since_last_close)} seconds")
+                if time_since_last_close < 120:
+                    print("The last closed position was less than 2 minutes ago. A new order will not be placed.")
+                    return
+
+
+            is_open_positions = self.data_fetcher.get_open_positions(self.symbol)
+            if is_open_positions:
+                print("There is already an open position. A new order will not be placed.")
+                return
+
+            is_open_orders = self.data_fetcher.get_open_orders(self.symbol)
+            if is_open_orders:
+                print("There is an open limit order. A new order will not be placed.")
+                return
+            
             stop_loss, take_profit = self.risk_management.calculate_dynamic_risk_management(df, current_price, trend)
+
             print(f"Trend: {trend.upper()}")
             print(f"Stop Loss: {stop_loss:.2f}")
             print(f"Take Profit: {take_profit:.2f}")
@@ -97,7 +96,7 @@ class TradingBot:
                 qty=self.quantity,
                 current_price=current_price,
                 leverage=self.leverage,
-                stop_loss=stop_loss,
+                # stop_loss=stop_loss,
                 take_profit=take_profit
             )
 
@@ -110,7 +109,7 @@ class TradingBot:
 
     def run(self):
         self.job()
-        schedule.every(10).seconds.do(self.job)
+        schedule.every(5).seconds.do(self.job)
         while True:
             schedule.run_pending()
             time.sleep(1)
@@ -118,4 +117,3 @@ class TradingBot:
 if __name__ == "__main__":
     bot = TradingBot()
     bot.run()
-

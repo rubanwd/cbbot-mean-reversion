@@ -72,37 +72,25 @@ class BybitDemoSession:
         try:
             # Set leverage before placing an order
             self.set_leverage(symbol, leverage=leverage)
-            
+
             endpoint = "/v5/order/create"
             # Manually set positionIdx based on known position mode:
             # For Hedge Mode: 1 for long (buy), 2 for short (sell)
             # For One-way Mode: 0
             position_mode = "one_way"  # Set this to "hedge" if you are in hedge mode
-            
+
             if position_mode == "hedge":
                 position_idx = 1 if side.lower() == 'buy' else 2
             else:  # one_way
                 position_idx = 0
 
-            # Adjust price based on the side of the orderare you st
-            if side.lower() == 'buy':
-                price = current_price * 0.9999  # 0.01% below the current market price
-                if stop_loss and stop_loss >= price:
-                    print("Stop-loss is higher than or equal to the limit price for a Buy order. Adjusting stop-loss...")
-                    stop_loss = price * 0.995  # Ensure stop-loss is slightly below the limit price
-            else:
-                price = current_price * 1.0001  # 0.01% above the current market price
-                if stop_loss and stop_loss <= price:
-                    print("Stop-loss is lower than or equal to the limit price for a Sell order. Adjusting stop-loss...")
-                    stop_loss = price * 1.005  # Ensure stop-loss is slightly above the limit price
-
+            # Prepare order parameters for a market order
             order_params = {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side,
-                "orderType": "Limit",
+                "orderType": "Market",  # Changed to Market order
                 "qty": str(qty),  # Convert quantity to string
-                "price": str(price),  # Ensure price is sent as a string
                 "positionIdx": position_idx,  # Use the positionIdx determined above
             }
 
@@ -117,8 +105,9 @@ class BybitDemoSession:
 
             return response['result']
         except Exception as e:
-            print(f"Ошибка при размещении ордера: {e}")
+            print(f"Error placing order: {e}")
             return None
+
 
 
 
@@ -212,7 +201,6 @@ class BybitDemoSession:
                 last_closed_position = max(closed_positions, key=lambda x: int(x['updatedTime']))
                 return last_closed_position
             else:
-                print("No closed positions found.")
                 return None
         except Exception as e:
             print(f"Error fetching last closed position: {e}")

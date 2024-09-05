@@ -21,9 +21,15 @@ class Strategies:
         bollinger_lower = df['Bollinger_lower'].iloc[-1]
 
         # Check for overbought (short) or oversold (long) conditions
-        if rsi > 70 or current_price >= bollinger_upper:
+        if rsi > 75 or current_price >= bollinger_upper:
             return 'short'
-        elif rsi < 30 or current_price <= bollinger_lower:
+        elif rsi < 25 or current_price <= bollinger_lower:
             return 'long'
         return None
+    
+        # if rsi > 50:
+        #     return 'long'
+        # elif rsi < 50:
+        #     return 'short'
+        # return None
 
