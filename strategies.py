@@ -6,6 +6,8 @@ from indicators import Indicators
 class Strategies:
     def __init__(self):
         self.indicators = Indicators()
+        self.high_rsi = 75
+        self.low_rsi = 25
 
     def prepare_dataframe(self, historical_data):
         df = pd.DataFrame(historical_data)
@@ -21,9 +23,9 @@ class Strategies:
         bollinger_lower = df['Bollinger_lower'].iloc[-1]
 
         # Check for overbought (short) or oversold (long) conditions
-        if rsi > 75 or current_price >= bollinger_upper:
+        if rsi > self.high_rsi or current_price >= bollinger_upper:
             return 'short'
-        elif rsi < 25 or current_price <= bollinger_lower:
+        elif rsi < self.low_rsi or current_price <= bollinger_lower:
             return 'long'
         return None
     

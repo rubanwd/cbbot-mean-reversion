@@ -84,15 +84,39 @@ class BybitDemoSession:
             else:  # one_way
                 position_idx = 0
 
-            # Prepare order parameters for a market order
+            # Adjust price based on the side of the orderare you st
+            if side.lower() == 'buy':
+                # price = current_price * 0.9999  # 0.01% below the current market price
+                price = current_price * 0.9997  # 0.03% below the current market price
+                if stop_loss and stop_loss >= price:
+                    print("Stop-loss is higher than or equal to the limit price for a Buy order. Adjusting stop-loss...")
+                    # stop_loss = price * 0.995  # Ensure stop-loss is slightly below the limit price
+            else:
+                # price = current_price * 1.0001  # 0.01% above the current market price
+                price = current_price * 1.0003  # 0.03% above the current market price
+                if stop_loss and stop_loss <= price:
+                    print("Stop-loss is lower than or equal to the limit price for a Sell order. Adjusting stop-loss...")
+                    # stop_loss = price * 1.005  # Ensure stop-loss is slightly above the limit price
+
             order_params = {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side,
-                "orderType": "Market",  # Changed to Market order
+                "orderType": "Limit",
                 "qty": str(qty),  # Convert quantity to string
+                "price": str(price),  # Ensure price is sent as a string
                 "positionIdx": position_idx,  # Use the positionIdx determined above
             }
+
+                        # Prepare order parameters for a market order
+            # order_params = {
+            #     "category": "linear",
+            #     "symbol": symbol,
+            #     "side": side,
+            #     "orderType": "Market",  # Changed to Market order
+            #     "qty": str(qty),  # Convert quantity to string
+            #     "positionIdx": position_idx,  # Use the positionIdx determined above
+            # }
 
             if stop_loss:
                 order_params["stopLoss"] = str(stop_loss)
@@ -135,6 +159,9 @@ class BybitDemoSession:
         except Exception as e:
             print(f"Ошибка при получении позиций: {e}")
             return None
+        
+
+
 
     def get_open_orders(self, symbol):
         try:
